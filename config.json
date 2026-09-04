@@ -8,8 +8,10 @@
     "base_url": "http://127.0.0.1:11434",
     "default_model": "qwen3:8b",
     "temperature": 0.25,
-    "context_tokens": 32768,
-    "timeout_seconds": 600
+    "context_tokens": 8192,
+    "timeout_seconds": 600,
+    "keep_alive": "30s",
+    "enabled": false
   },
   "agent": {
     "max_rounds": 8,
@@ -48,5 +50,44 @@
     "pass_model_name": false,
     "internal_auth_token_env": "DEER_FLOW_INTERNAL_AUTH_TOKEN",
     "owner_prefix": "nexus"
+  },
+  "knowledge": {
+    "ticket_matrix_enabled": true,
+    "ticket_matrix_top_k": 4,
+    "official_policy_precedence": true,
+    "only_when_relevant": true
+  },
+  "learning": {
+    "enabled": true,
+    "auto_capture_explicit_teaching": true,
+    "max_relevant_memories": 6,
+    "company_policy_requires_explicit_global_teach": true
+  },
+  "zendesk": {
+    "enabled": true,
+    "operator_mode": "copilot",
+    "auto_write_ticket": false,
+    "auto_send_customer_reply": false,
+    "policy_source": "Ticket Matrix",
+    "show_loading_percent": true
+  },
+  "llm": {
+    "provider": "llama_cpp",
+    "fallback_provider": "",
+    "allow_fallback": false
+  },
+  "llama_cpp": {
+    "base_url": "http://127.0.0.1:8080",
+    "default_model": "nexus-local",
+    "temperature": 0.25,
+    "context_tokens": 8192,
+    "max_output_tokens": 4096,
+    "timeout_seconds": 600,
+    "server_exe": "./runtime/llama.cpp/llama-server.exe",
+    "model_path": "./models/nexus-model.gguf",
+    "gpu_layers": 20,
+    "threads": 8,
+    "parallel": 1,
+    "flash_attention": true
   }
 }

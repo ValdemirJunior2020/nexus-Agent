@@ -667,3 +667,19 @@ with:
 NEXUS Agent is under active development.
 
 Expect APIs, adapters, configuration options, and orchestration behavior to continue evolving.
+
+
+# Zendesk Operator Foundation
+
+This build includes an initial Zendesk operator layer with Ticket Matrix policy retrieval and controlled learning. See `ZENDESK_APP_README.md`. Official Ticket Matrix rules override learned memory and historical examples. The same policy context is supplied to NEXUS and DeerFlow.
+
+
+## Automatic issue logging
+
+NEXUS now keeps runtime logs under `data/logs/`. General server logs rotate through `nexus.log`, while structured failures are appended to `issues.jsonl` with an `NX-...` incident ID. Tool failures, DeerFlow failures, API exceptions, and Zendesk app-reported issues are captured. Sensitive credential-like fields are redacted and full ticket/prompt bodies are not intentionally written into the structured issue context.
+
+When an operation fails, the user-facing message is:
+
+> I'm saving all the issues happening with me so Junior can fix it later.
+
+Run `EXPORT_NEXUS_LOGS.bat` from the NEXUS folder to create a `NEXUS_ERROR_REPORT_YYYYMMDD_HHMMSS.zip` that can be sent to Junior for debugging. The Zendesk app also queues client-side issues locally when the NEXUS API is temporarily unreachable and retries reporting them when the connection returns.

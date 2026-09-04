@@ -1,10 +1,11 @@
 @echo off
 setlocal
-title Ollama Universal SuperAgent Installer
+title NEXUS Local AI SuperAgent Installer
 cd /d "%~dp0"
 
 echo ============================================================
-echo   OLLAMA UNIVERSAL SUPERAGENT - INSTALL
+echo   NEXUS LOCAL AI SUPERAGENT - INSTALL
+echo   Primary local model server: llama.cpp
 echo ============================================================
 echo.
 
@@ -16,24 +17,28 @@ if errorlevel 1 (
   exit /b 1
 )
 
-where ollama >nul 2>nul
+if not exist ".venv\Scripts\python.exe" (
+  echo [1/3] Creating Python environment...
+  py -3 -m venv .venv 2>nul
+  if errorlevel 1 py -m venv .venv
+  if errorlevel 1 (
+    echo [ERROR] Could not create the Python virtual environment.
+    pause
+    exit /b 1
+  )
+) else (
+  echo [1/3] Python environment already exists.
+)
+
+echo [2/3] Updating pip...
+".venv\Scripts\python.exe" -m pip install --upgrade pip
 if errorlevel 1 (
-  echo [ERROR] Ollama was not found in PATH.
-  echo Install Ollama first, then run this installer again.
+  echo [ERROR] pip upgrade failed.
   pause
   exit /b 1
 )
 
-if not exist ".venv\Scripts\python.exe" (
-  echo [1/4] Creating Python environment...
-  py -3 -m venv .venv 2>nul
-  if errorlevel 1 py -m venv .venv
-)
-
-echo [2/4] Updating pip...
-".venv\Scripts\python.exe" -m pip install --upgrade pip
-
-echo [3/4] Installing agent dependencies...
+echo [3/3] Installing NEXUS dependencies...
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt
 if errorlevel 1 (
   echo [ERROR] Dependency installation failed.
@@ -41,19 +46,21 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [4/4] Checking Ollama...
-curl -s http://127.0.0.1:11434/api/tags >nul 2>nul
+echo.
+echo Checking llama.cpp server on http://127.0.0.1:8080 ...
+curl -s http://127.0.0.1:8080/health >nul 2>nul
 if errorlevel 1 (
-  echo Ollama is installed but not responding. Starting it...
-  start "" /min ollama serve
-  timeout /t 3 /nobreak >nul
+  echo [WARN] llama.cpp is not running yet.
+  echo Start it first with START_LLAMA_CPP.bat or your llama-server command.
+) else (
+  echo [OK] llama.cpp is running.
 )
 
 echo.
 echo ============================================================
 echo INSTALL COMPLETE
 echo Run START_AGENT.bat
-echo API: http://127.0.0.1:8787
+echo API : http://127.0.0.1:8787
 echo Docs: http://127.0.0.1:8787/docs
 echo ============================================================
-pause
+exit /b 0

@@ -31,23 +31,43 @@ async def browser_task(task: str, model: str) -> dict[str, Any]:
         return {"ok": False, "error": "Browser Use is disabled in config.json"}
     if not task.strip():
         return {"ok": False, "error": "Browser task is empty"}
+
+    provider = str(CONFIG.get("llm", {}).get("provider", "llama_cpp")).lower()
     try:
-        from browser_use import Agent, ChatOllama
+        if provider == "llama_cpp":
+            from browser_use import Agent, ChatOpenAI
+            cfg = CONFIG.get("llama_cpp", {})
+            llm = ChatOpenAI(
+                model=str(cfg.get("default_model", "nexus-local")),
+                api_key="local-no-key",
+                base_url=str(cfg.get("base_url", "http://127.0.0.1:8080")).rstrip("/") + "/v1",
+            )
+        else:
+            from browser_use import Agent, ChatOllama
+            ctx = int(CONFIG.get("ollama", {}).get("context_tokens", 8192))
+            base_url = CONFIG.get("ollama", {}).get("base_url", "http://127.0.0.1:11434")
+            kwargs = {"model": model, "num_ctx": ctx}
+            try:
+                llm = ChatOllama(**kwargs, host=base_url)
+            except TypeError:
+                try:
+                    llm = ChatOllama(**kwargs, base_url=base_url)
+                except TypeError:
+                    llm = ChatOllama(**kwargs)
     except Exception as exc:
-        return {"ok": False, "error": "Browser Use extra is not installed. Run INSTALL_POWER_TOOLS.bat", "details": str(exc)}
+        return {
+            "ok": False,
+            "error": "Browser Use model adapter is unavailable. Run INSTALL_POWER_TOOLS.bat.",
+            "details": str(exc),
+            "provider": provider,
+        }
 
-    ctx = int(CONFIG.get("ollama", {}).get("context_tokens", 32768))
-    base_url = CONFIG.get("ollama", {}).get("base_url", "http://127.0.0.1:11434")
-    kwargs = {"model": model, "num_ctx": ctx}
-    # Some browser-use releases accept host/base_url; keep compatibility by falling back.
+    # Text-only local Qwen models may be less reliable for visual browser actions,
+    # so keep vision automatic/disabled when the local model has no vision support.
     try:
-        llm = ChatOllama(**kwargs, host=base_url)
+        agent = Agent(task=task, llm=llm, use_vision=False if provider == "llama_cpp" else "auto")
     except TypeError:
-        try:
-            llm = ChatOllama(**kwargs, base_url=base_url)
-        except TypeError:
-            llm = ChatOllama(**kwargs)
-
-    agent = Agent(task=task, llm=llm)
+        agent = Agent(task=task, llm=llm)
     history = await agent.run(max_steps=int(CONFIG.get("tools", {}).get("browser_max_steps", 25)))
-    return {"ok": True, "result": _history_to_text(history)}
+    return {"ok": True, "result": _history_to_text(history), "provider": provider}
+

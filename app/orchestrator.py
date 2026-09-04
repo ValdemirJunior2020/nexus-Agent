@@ -4,16 +4,19 @@ import re
 from typing import Any
 
 from .config import CONFIG
-from .ollama_client import OllamaClient
-from .memory import add, recent, get_engine_session, set_engine_session
+from .local_llm import LocalLLMClient
+from .memory import add, recent, get_engine_session, set_engine_session, build_learning_context
 from .agents.prompts import ROLES
 from .tools.registry import tool_catalog_text, execute as execute_tool
 from .engines.deerflow import status as deerflow_status, run as deerflow_run
+from .knowledge import build_ticket_matrix_context
+from .learning import auto_capture_explicit_teaching
+from .error_logging import record_issue
 
 
 class SuperAgent:
     def __init__(self):
-        self.llm = OllamaClient()
+        self.llm = LocalLLMClient()
 
     def _extract_json(self, text, fallback):
         try:
@@ -108,10 +111,10 @@ class SuperAgent:
             "answer": answer,
             "model": model,
             "session_id": session_id,
-            "agents_used": ["ollama-direct"],
+            "agents_used": ["local-direct"],
             "rounds": 1,
             "verified": False,
-            "metadata": {"mode": "fast", "engine": "ollama", "engine_router": engine_meta, "tools_used": []},
+            "metadata": {"mode": "fast", "engine": "local_llm", "provider": self.llm.last_provider, "engine_router": engine_meta, "tools_used": []},
         }
 
     async def _review_deerflow(self, prompt, answer, model, context):
@@ -125,16 +128,30 @@ class SuperAgent:
 
     async def _run_deerflow(self, prompt, model, session_id, context, deerflow_mode, engine_meta):
         thread_id = get_engine_session(session_id, "deerflow")
-        result = await deerflow_run(
-            prompt=(f"NEXUS CONTEXT:\n{context}\n\nUSER REQUEST:\n{prompt}" if context else prompt),
-            session_id=session_id,
-            thread_id=thread_id,
-            model=model,
-            mode=deerflow_mode,
-        )
+        try:
+            result = await deerflow_run(
+                prompt=(f"NEXUS CONTEXT:\n{context}\n\nUSER REQUEST:\n{prompt}" if context else prompt),
+                session_id=session_id,
+                thread_id=thread_id,
+                model=model,
+                mode=deerflow_mode,
+            )
+        except Exception as exc:
+            incident_id = record_issue(
+                "deerflow.run",
+                exc,
+                context={"session_id": session_id, "mode": deerflow_mode, "model": model},
+            )
+            result = {"ok": False, "error": f"{type(exc).__name__}: {exc}", "incident_id": incident_id}
         if not result.get("ok") and result.get("error") == "thread_not_found":
             result = await deerflow_run(prompt=prompt, session_id=session_id, thread_id=None, model=model, mode=deerflow_mode)
         if not result.get("ok"):
+            if not result.get("incident_id"):
+                result["incident_id"] = record_issue(
+                    "deerflow.result",
+                    message=str(result.get("error") or "DeerFlow returned ok=false"),
+                    context={"session_id": session_id, "mode": deerflow_mode, "model": model},
+                )
             fallback = str(CONFIG.get("deerflow", {}).get("fallback_engine", "nexus"))
             engine_meta = dict(engine_meta)
             engine_meta["deerflow_runtime_fallback"] = result
@@ -298,14 +315,38 @@ class SuperAgent:
         allow_tools=True,
         engine="auto",
         deerflow_mode="ultra",
+        user_id="default",
+        ticket_id=None,
+        allow_learning=True,
     ):
-        model = model or CONFIG["ollama"]["default_model"]
+        model = model or self.llm.default_model()
         memory = recent(session_id, limit=10)
         memory_text = "\n".join(f'{m["role"]}: {m["content"]}' for m in memory)
-        base_context = "\n\n".join(x for x in [memory_text, context or ""] if x).strip()
+
+        retrieval_query = "\n".join(x for x in [prompt, context or ""] if x)
+        policy_context, policy_matches = build_ticket_matrix_context(retrieval_query, force=bool(ticket_id))
+        learned_context, learned_items = build_learning_context(
+            user_id or "default",
+            retrieval_query,
+            limit=int(CONFIG.get("learning", {}).get("max_relevant_memories", 6)),
+        )
+        base_context = "\n\n".join(
+            x for x in [policy_context, learned_context, memory_text, context or ""] if x
+        ).strip()
+
+        captured_learning = None
+        if allow_learning:
+            captured_learning = auto_capture_explicit_teaching(user_id or "default", prompt, session_id=session_id)
         add(session_id, "user", prompt)
 
         selected_engine, engine_meta = await self._choose_engine(prompt, model, mode, engine, base_context)
+        engine_meta = dict(engine_meta)
+        engine_meta["policy_matches"] = [m.get("issue") for m in policy_matches]
+        engine_meta["learned_memory_ids"] = [m.get("id") for m in learned_items]
+        if ticket_id:
+            engine_meta["ticket_id"] = ticket_id
+        if captured_learning:
+            engine_meta["captured_learning"] = captured_learning
 
         # Explicit DeerFlow still degrades safely if its service is offline.
         if selected_engine == "deerflow":

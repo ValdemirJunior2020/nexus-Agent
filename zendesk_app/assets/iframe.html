@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NEXUS Zendesk Operator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <div class="header">
+      <div>
+        <div class="eyebrow">NEXUS</div>
+        <h1>Ticket Operator</h1>
+      </div>
+      <span id="status" class="status">Ready</span>
+    </div>
+
+    <p class="sub">Reads the current Zendesk ticket and checks the official Ticket Matrix before recommending an action.</p>
+
+    <button id="analyze" type="button">Analyze ticket</button>
+
+    <div id="progressWrap" class="progress-wrap hidden" aria-live="polite">
+      <div class="progress-head"><span id="progressLabel">Preparing…</span><strong id="progressPct">0%</strong></div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar" style="width:0%"></div></div>
+    </div>
+
+    <section id="result" class="result hidden" aria-live="polite"></section>
+
+    <div class="actions hidden" id="actions">
+      <button id="copy" type="button" class="secondary">Copy recommendation</button>
+      <button id="append" type="button" class="secondary">Append to internal note</button>
+    </div>
+
+    <details>
+      <summary>What NEXUS reads</summary>
+      <p>Ticket id, subject, requester, status, priority, brand, group/assignee, tags, and ticket conversation. It does not auto-send replies or solve tickets in this foundation build.</p>
+    </details>
+  </main>
+
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

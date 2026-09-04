@@ -24,6 +24,7 @@ class OllamaClient:
             "messages": messages,
             "stream": False,
             "options": options,
+            "keep_alive": CONFIG["ollama"].get("keep_alive", "2m"),
         }
         if format_json:
             payload["format"] = "json"
