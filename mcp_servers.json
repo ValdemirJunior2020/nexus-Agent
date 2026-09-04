@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "example_stdio": {
+      "enabled": false,
+      "transport": "stdio",
+      "command": "python",
+      "args": ["path/to/your_mcp_server.py"]
+    },
+    "example_http": {
+      "enabled": false,
+      "transport": "http",
+      "url": "http://127.0.0.1:9000/mcp"
+    }
+  }
+}

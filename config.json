@@ -1,0 +1,34 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8787
+  },
+  "ollama": {
+    "base_url": "http://127.0.0.1:11434",
+    "default_model": "qwen3:8b",
+    "temperature": 0.25,
+    "context_tokens": 32768,
+    "timeout_seconds": 600
+  },
+  "agent": {
+    "max_rounds": 8,
+    "max_subagents": 6,
+    "review_enabled": true,
+    "memory_enabled": true,
+    "planner_enabled": true,
+    "parallel_subagents": true,
+    "show_internal_trace": false,
+    "max_tool_rounds": 4,
+    "tool_router_enabled": true
+  },
+  "tools": {
+    "filesystem_enabled": true,
+    "shell_enabled": false,
+    "web_fetch_enabled": true,
+    "workspace_root": "./workspace",
+    "browser_use_enabled": true,
+    "browser_max_steps": 25,
+    "mcp_enabled": true,
+    "agent_reach_enabled": true
+  }
+}

@@ -1,0 +1,3 @@
+# Optional power tools. Core server still runs without these.
+browser-use>=0.11
+mcp>=2,<3
