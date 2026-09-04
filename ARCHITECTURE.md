@@ -1,48 +1,52 @@
-# Ollama Universal SuperAgent v2 architecture
+# NEXUS Agent v3 Architecture
 
 ```text
-APP / USER
-   |
-   v
-FastAPI :8787
-   |
-   v
-SESSION MEMORY
-   |
-   v
-TOOL ROUTER ------------------------------+
-   |                                      |
-   | finish                               | tool
-   v                                      v
-PLANNER                             TOOL REGISTRY
-   |                                      |
-   |                    +-----------------+-------------------+
-   |                    |                 |                   |
-   |                Browser Use          MCP             Agent Reach
-   |                    |                 |                   |
-   |                 Ollama       stdio / HTTP      gh / yt-dlp / reader
-   |                    |                 |                   |
-   |                    +-------- observation --------------+
-   |                                      |
-   +<-------------------------------------+
-   |
-   +--> Researcher
-   +--> Coder
-   +--> Analyst
-   +--> Document Analyst
-   +--> QA
-   +--> Critic
-   |
-   v
-SYNTHESIZER
-   |
-   v
-REVIEWER -- fail --> CORRECTIVE REWRITE --+
-   |                                       |
-   +---------------- pass <----------------+
-   |
-   v
-FINAL ANSWER
+APPLICATION / USER
+        |
+        v
+NEXUS API :8787
+        |
+        v
+ENGINE ROUTER
+        |
+        +------------------+---------------------+
+        |                  |                     |
+        v                  v                     v
+ OLLAMA DIRECT        NEXUS ENGINE          DEERFLOW ENGINE
+ simple/fast          medium/complex        long-horizon/heavy
+        |                  |                     |
+        |            TOOL ROUTER                 | HTTP/SSE
+        |             /   |   \                  v
+        |        Browser MCP AgentReach     DeerFlow :2026
+        |                  |               plan / sandbox /
+        |            PLANNER               skills / subagents /
+        |                  |               memory / artifacts
+        |          SPECIALIST FAN-OUT              |
+        |        Research / Code / QA              |
+        |          Analyst / Critic                |
+        |                  |                       |
+        +----------> SYNTHESIS <-------------------+
+                           |
+                           v
+                    NEXUS REVIEWER
+                           |
+                 pass -----+----- fail
+                           |       |
+                           |       +--> correction
+                           |            - NEXUS rewrite, or
+                           |            - same DeerFlow thread
+                           v
+                      FINAL ANSWER
 ```
 
-The LLM's private reasoning is not exposed as a product feature. The system exposes useful execution metadata such as which specialists/tools were used and the review score.
+## Engine rules
+
+`ollama` is the low-overhead path. `nexus` is the normal multi-agent/tool path. `deerflow` is reserved for long-horizon work where its sandbox, planning, subagents, skills, or extended execution are worth the extra overhead.
+
+## DeerFlow isolation
+
+DeerFlow is not vendored into the NEXUS repository. NEXUS uses DeerFlow's official Gateway/LangGraph-compatible API. Each NEXUS `session_id` can map to a persistent DeerFlow `thread_id` in local SQLite.
+
+## Failure behavior
+
+DeerFlow health is checked before automatic delegation. If it is unavailable, the engine router falls back to NEXUS. Optional integrations are not allowed to make the core server unusable.

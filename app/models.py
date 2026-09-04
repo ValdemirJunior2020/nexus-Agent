@@ -10,6 +10,8 @@ class AgentRequest(BaseModel):
     model: Optional[str] = None
     session_id: str = "default"
     mode: Literal["auto","fast","deep","research","code","qa","document"] = "auto"
+    engine: Literal["auto","ollama","nexus","deerflow"] = "auto"
+    deerflow_mode: Literal["flash","standard","pro","ultra"] = "ultra"
     context: Optional[str] = None
     allow_tools: bool = True
 

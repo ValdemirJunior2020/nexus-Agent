@@ -246,3 +246,89 @@ HTTPS, rate limiting, access controls, and proper network security.
 The architecture borrows useful patterns from CrewAI, LangGraph, AutoGen, MetaGPT, smolagents, Letta, LlamaIndex, Pydantic AI, Browser Use, Agent Reach, MCP, and evaluator/guardrail systems without forcing all those orchestration frameworks to fight inside one Python environment.
 
 The core stays yours. External frameworks are adapters where they add an actual capability.
+
+---
+
+# NEXUS v3 — Hybrid Engine Router
+
+NEXUS v3 adds an optional DeerFlow 2.0 execution engine without replacing the existing NEXUS runtime.
+
+## Three execution engines
+
+NEXUS can now route each request to:
+
+- `ollama` — direct local model response for simple/fast work.
+- `nexus` — NEXUS planner + approved tools + specialist subagents + reviewer.
+- `deerflow` — DeerFlow long-horizon super-agent for heavy multi-step research, coding, sandbox, artifact, and subagent workloads.
+- `auto` — NEXUS chooses the lightest capable engine.
+
+Example:
+
+```json
+{
+  "prompt": "Research this complex subject and create a complete implementation plan.",
+  "model": "qwen3:8b",
+  "session_id": "project-42",
+  "mode": "deep",
+  "engine": "auto",
+  "deerflow_mode": "ultra"
+}
+```
+
+## DeerFlow modes
+
+NEXUS maps directly to DeerFlow context modes:
+
+- `flash` — no thinking/planning/subagents.
+- `standard` — thinking enabled.
+- `pro` — thinking + plan mode.
+- `ultra` — thinking + planning + DeerFlow subagents.
+
+## Session continuity
+
+NEXUS stores the DeerFlow `thread_id` associated with each NEXUS `session_id` in the existing local SQLite memory database. A later request using the same NEXUS session can continue the same DeerFlow conversation.
+
+## NEXUS review of DeerFlow
+
+A DeerFlow result is not blindly trusted. NEXUS runs its local Final Reviewer over the returned result. When the review fails, NEXUS sends concrete correction instructions back to the same DeerFlow thread and reviews the corrected result again.
+
+## Graceful fallback
+
+DeerFlow is optional. If it is disabled, not installed, still starting, or unreachable, NEXUS falls back to the configured engine (`nexus` by default). The core local server remains usable.
+
+## Engine status
+
+```text
+GET http://127.0.0.1:8787/engines/status
+GET http://127.0.0.1:8787/engines/deerflow/status
+```
+
+Direct DeerFlow adapter test:
+
+```text
+POST http://127.0.0.1:8787/engines/deerflow/run
+```
+
+## DeerFlow configuration
+
+`config.json` contains a `deerflow` section. Default local URLs follow DeerFlow's unified proxy:
+
+```json
+{
+  "deerflow": {
+    "enabled": true,
+    "base_url": "http://127.0.0.1:2026",
+    "langgraph_url": "http://127.0.0.1:2026/api/langgraph",
+    "assistant_id": "lead_agent",
+    "default_mode": "ultra",
+    "recursion_limit": 1000,
+    "fallback_engine": "nexus"
+  }
+}
+```
+
+DeerFlow remains a separate installation. See `DEERFLOW_SETUP_WINDOWS.md`.
+
+## Important Git design
+
+NEXUS does not clone DeerFlow inside this repository and does not modify the repository's `.git` metadata. Keep DeerFlow in its own folder and let NEXUS communicate with it over HTTP.

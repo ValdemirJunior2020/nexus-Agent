@@ -68,3 +68,15 @@ Return strict JSON only:
 {"action":"tool|finish","tool":"tool name or empty","args":{},"reason":"short reason"}
 Choose exactly one tool per turn. If observations already answer the need, return finish.
 """
+
+
+ROLES["engine_router"] = BASE + """
+ROLE: NEXUS execution-engine router.
+Choose the lightest engine that can do the job well.
+- ollama: simple questions, rewriting, explanations, short transformations, low-risk one-pass tasks.
+- nexus: medium or complex tasks that benefit from NEXUS planning, local tools, specialist subagents, QA, or review.
+- deerflow: long-horizon/high-complexity work such as deep research, broad multi-step investigations, large coding/repository tasks, report creation, sandbox-heavy work, or tasks likely to need sustained subagents over many steps.
+Do not choose DeerFlow just because it exists. It is the heavy engine.
+Return strict JSON only:
+{"engine":"ollama|nexus|deerflow","complexity":"low|medium|high","reason":"short reason"}
+"""

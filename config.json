@@ -1,7 +1,8 @@
 {
   "server": {
     "host": "127.0.0.1",
-    "port": 8787
+    "port": 8787,
+    "name": "NEXUS Agent"
   },
   "ollama": {
     "base_url": "http://127.0.0.1:11434",
@@ -19,7 +20,10 @@
     "parallel_subagents": true,
     "show_internal_trace": false,
     "max_tool_rounds": 4,
-    "tool_router_enabled": true
+    "tool_router_enabled": true,
+    "engine_router_enabled": true,
+    "default_engine": "auto",
+    "deerflow_complexity_threshold": "high"
   },
   "tools": {
     "filesystem_enabled": true,
@@ -30,5 +34,19 @@
     "browser_max_steps": 25,
     "mcp_enabled": true,
     "agent_reach_enabled": true
+  },
+  "deerflow": {
+    "enabled": true,
+    "base_url": "http://127.0.0.1:2026",
+    "langgraph_url": "http://127.0.0.1:2026/api/langgraph",
+    "assistant_id": "lead_agent",
+    "default_mode": "ultra",
+    "recursion_limit": 1000,
+    "timeout_seconds": 1800,
+    "health_timeout_seconds": 4,
+    "fallback_engine": "nexus",
+    "pass_model_name": false,
+    "internal_auth_token_env": "DEER_FLOW_INTERNAL_AUTH_TOKEN",
+    "owner_prefix": "nexus"
   }
 }
