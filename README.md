@@ -201,7 +201,46 @@ const data = await r.json();
 console.log(data.answer);
 console.log(data.metadata.tools_used);
 ```
+## Security
 
+NEXUS Agent is designed to run locally.
+
+By default:
+
+- The API binds to `127.0.0.1`.
+- Arbitrary shell execution is disabled.
+- Filesystem tools should remain limited to the local workspace.
+- MCP integrations are optional.
+- Browser automation is optional.
+- Local memory and runtime files should not be committed to GitHub.
+
+### Never commit
+
+Do not commit any of the following:
+
+- `.env` files
+- API keys
+- passwords
+- tokens
+- private certificates
+- browser cookies
+- login sessions
+- `memory.db`
+- private MCP configuration files
+- customer or company data
+- files placed inside the local workspace
+
+Use environment variables or local configuration files for secrets.
+
+If a secret is accidentally committed, deleting the file is not enough.
+Revoke or rotate the exposed credential immediately.
+
+### Network access
+
+NEXUS Agent is configured for local use by default.
+
+Do not expose the API directly to the public internet without authentication,
+HTTPS, rate limiting, access controls, and proper network security.
 ## Why this is one runtime instead of 10 frameworks installed together
 
 The architecture borrows useful patterns from CrewAI, LangGraph, AutoGen, MetaGPT, smolagents, Letta, LlamaIndex, Pydantic AI, Browser Use, Agent Reach, MCP, and evaluator/guardrail systems without forcing all those orchestration frameworks to fight inside one Python environment.

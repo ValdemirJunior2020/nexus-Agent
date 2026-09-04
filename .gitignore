@@ -1,0 +1,74 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# Local runtime data
+data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local workspace files
+workspace/*
+!workspace/README.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Browser / automation local data
+browser-data/
+user-data/
+playwright/.cache/
+playwright-report/
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+cache/
+tmp/
+
+# Backups
+*.bak
+*.backup
+
+# Local MCP configuration with possible secrets
+mcp_servers.local.json
+mcp_private.json
+
+# Ollama / model data
+models/
+*.gguf
+*.safetensors
+
+# Node if added later
+node_modules/
+dist/
+build/
