@@ -1,55 +1,286 @@
-# Ollama Universal SuperAgent v2
+# NEXUS Agent v3
 
-A reusable **local multi-agent reasoning + tool server** for Ollama.
+A local-first, multi-agent AI runtime for Ollama with planning, tools, specialist agents, review loops, persistent memory, MCP support, browser automation, and optional DeerFlow execution.
 
-## What changed in v2
+NEXUS is designed to give local models a practical agent runtime without forcing multiple orchestration frameworks into the same environment.
 
-v1 already had planning, subagents, memory, synthesis, review, retries, an Ollama model switch, and an OpenAI-compatible API.
+## Overview
 
-v2 adds a real agentic tool loop:
+NEXUS can route requests through different execution paths depending on complexity:
 
-`User -> Tool Router -> Tool -> Observation -> Tool Router -> Specialists -> Synthesizer -> Reviewer -> Fix/Pass`
+```text
+User
+  ↓
+Engine Router
+  ├── Ollama
+  ├── NEXUS Agent Runtime
+  └── DeerFlow
+```
 
-The model no longer just knows that tools exist. It can select and execute them, inspect the returned observation, and continue.
+The native NEXUS runtime follows an agentic execution loop:
 
-## Included agent behaviors
+```text
+User
+  ↓
+Tool Router
+  ↓
+Tool Execution
+  ↓
+Observation
+  ↓
+Specialist Agents
+  ↓
+Synthesizer
+  ↓
+Final Reviewer
+  ↓
+Fix / Pass
+```
 
-- planner / orchestrator
-- researcher
-- coder
-- analyst
-- document analyst
-- QA verifier
-- adversarial critic
-- synthesizer
-- final reviewer
-- persistent SQLite memory
-- retry / correction loop
-- structured tool router
-- automatic subagents
-- switchable Ollama model per request
+The model does not merely know tools exist. It can select tools, execute them, inspect observations, continue reasoning, delegate work, synthesize results, and review its own output.
 
-## Power tools
+---
 
-### Browser Use + Ollama
+## Features
 
-Browser Use is an optional adapter. The agent can hand a multi-step website task to a real browser agent while using your selected local Ollama model.
+* Planner / orchestrator
+* Research agent
+* Coding agent
+* Analyst
+* Document analyst
+* QA verifier
+* Adversarial critic
+* Synthesizer
+* Final reviewer
+* Automatic specialist subagents
+* Retry and correction loops
+* Persistent SQLite memory
+* Structured tool routing
+* Per-request Ollama model selection
+* OpenAI-compatible API
+* MCP client support
+* Browser Use integration
+* Agent Reach integration
+* Optional DeerFlow 2.0 engine
+* Automatic engine routing
+* Graceful fallback between engines
+
+---
+
+# Execution Engines
+
+NEXUS v3 supports four engine modes.
+
+## `ollama`
+
+Direct local model execution.
+
+Best for:
+
+* simple questions
+* fast responses
+* lightweight generation
+* tasks that do not need tools or multi-agent orchestration
+
+## `nexus`
+
+Uses the native NEXUS runtime:
+
+* planner
+* approved tools
+* specialist subagents
+* synthesis
+* reviewer
+* correction loop
+
+Best for structured agent workflows that should remain inside the NEXUS runtime.
+
+## `deerflow`
+
+Uses DeerFlow as an optional long-horizon execution engine.
+
+Best for:
+
+* deep research
+* complex coding
+* long multi-step workflows
+* sandbox workloads
+* artifact generation
+* large subagent workflows
+
+## `auto`
+
+NEXUS automatically chooses the lightest capable execution engine.
+
+Example:
+
+```json
+{
+  "prompt": "Research this complex subject and create a complete implementation plan.",
+  "model": "qwen3:8b",
+  "session_id": "project-42",
+  "mode": "deep",
+  "engine": "auto",
+  "deerflow_mode": "ultra"
+}
+```
+
+---
+
+# DeerFlow Modes
+
+NEXUS maps DeerFlow execution to four modes:
+
+| Mode       | Behavior                                 |
+| ---------- | ---------------------------------------- |
+| `flash`    | No planning or subagents                 |
+| `standard` | Thinking enabled                         |
+| `pro`      | Thinking + planning                      |
+| `ultra`    | Thinking + planning + DeerFlow subagents |
+
+---
+
+# Session Continuity
+
+NEXUS stores the DeerFlow `thread_id` associated with each NEXUS `session_id` in the local SQLite memory database.
+
+This means later requests using the same NEXUS session can continue the same DeerFlow conversation.
+
+---
+
+# NEXUS Review of DeerFlow Results
+
+DeerFlow output is not automatically trusted.
+
+NEXUS runs its own Final Reviewer over DeerFlow responses.
+
+If the response fails review:
+
+1. NEXUS generates concrete correction instructions.
+2. The correction is sent back to the same DeerFlow thread.
+3. DeerFlow produces a revised result.
+4. NEXUS reviews the result again.
+
+---
+
+# Graceful Fallback
+
+DeerFlow is optional.
+
+If DeerFlow is:
+
+* disabled
+* not installed
+* still starting
+* unreachable
+* unavailable because of configuration issues
+
+NEXUS falls back to the configured fallback engine.
+
+The default fallback is:
+
+```text
+nexus
+```
+
+The core local API remains usable even when DeerFlow is unavailable.
+
+---
+
+# Installation
+
+## Requirements
+
+You should have:
+
+* Python
+* Ollama
+* at least one Ollama model installed
+* Windows if using the included `.bat` launchers
+
+Example model:
+
+```powershell
+ollama pull qwen3:8b
+```
+
+## Core Installation
+
+1. Clone or download this repository.
+2. Run:
+
+```text
+install.bat
+```
+
+3. Start NEXUS:
+
+```text
+START_AGENT.bat
+```
+
+The API runs locally at:
+
+```text
+http://127.0.0.1:8787
+```
+
+Interactive API documentation:
+
+```text
+http://127.0.0.1:8787/docs
+```
+
+---
+
+# Optional Power Tools
+
+For Browser Use, MCP support, and Agent Reach, run:
+
+```text
+INSTALL_POWER_TOOLS.bat
+```
+
+Then restart:
+
+```text
+START_AGENT.bat
+```
+
+Check available capabilities:
+
+```text
+GET http://127.0.0.1:8787/tools/status
+```
+
+---
+
+# Browser Use + Ollama
+
+Browser Use is an optional adapter that allows an agent to perform interactive web tasks while using the selected local Ollama model.
 
 Example tasks:
 
-- open a website and navigate several pages
-- click buttons and links
-- fill an approved form
-- test a web workflow
-- collect information that needs interaction instead of a simple HTTP request
+* navigate multiple pages
+* click links and buttons
+* fill approved forms
+* test web workflows
+* inspect interactive websites
+* gather information requiring browser interaction
 
-The Browser Use adapter is intentionally optional because it downloads a browser and has a much larger dependency tree than the core server.
+Browser Use is intentionally optional because it requires a browser installation and has a significantly larger dependency tree than the core server.
 
-### MCP client
+---
 
-Configure MCP servers in `mcp_servers.json`.
+# MCP Client
 
-Both stdio and Streamable HTTP style configurations are supported by the adapter.
+Configure MCP servers in:
+
+```text
+mcp_servers.json
+```
+
+Both `stdio` and Streamable HTTP-style configurations are supported.
 
 Example:
 
@@ -73,53 +304,41 @@ Example:
 
 The tool router can use:
 
-- `mcp_list_tools`
-- `mcp_call_tool`
+```text
+mcp_list_tools
+mcp_call_tool
+```
 
-This means you can add future MCP servers without rewriting the main agent.
+This allows new MCP servers to be added without rewriting the main NEXUS agent runtime.
 
-### Agent Reach integration
+---
 
-Agent Reach is treated as a capability installer/health layer. Its upstream commands are then called through restricted adapters.
+# Agent Reach Integration
+
+Agent Reach is used as a capability installation and health layer.
+
+Its upstream commands are exposed through restricted NEXUS adapters.
 
 Included integrations:
 
-- public URL reader
-- GitHub repository inspection through `gh`
-- YouTube/public media metadata through `yt-dlp`
-- Agent Reach doctor/status
+* public URL reader
+* GitHub repository inspection through `gh`
+* YouTube and public media metadata through `yt-dlp`
+* Agent Reach doctor/status
 
-`INSTALL_POWER_TOOLS.bat` runs Agent Reach in **safe mode**, so it doesn't automatically make system-package changes.
+`INSTALL_POWER_TOOLS.bat` runs Agent Reach in safe mode so it does not automatically make unrestricted system-package changes.
 
-## Install
+---
 
-First install the small core:
+# API Usage
 
-1. Unzip.
-2. Double-click `install.bat`.
-3. Double-click `START_AGENT.bat`.
+## Main Agent Request
 
-Core API:
+```text
+POST /agent/run
+```
 
-`http://127.0.0.1:8787`
-
-Docs:
-
-`http://127.0.0.1:8787/docs`
-
-Then, for Browser Use + MCP + Agent Reach, double-click:
-
-`INSTALL_POWER_TOOLS.bat`
-
-Restart `START_AGENT.bat` afterward.
-
-Check what is available at:
-
-`http://127.0.0.1:8787/tools/status`
-
-## Main agent request
-
-POST `/agent/run`
+Example:
 
 ```json
 {
@@ -127,191 +346,118 @@ POST `/agent/run`
   "model": "qwen3:8b",
   "session_id": "project-1",
   "mode": "deep",
-  "allow_tools": true
+  "allow_tools": true,
+  "engine": "auto"
 }
 ```
 
-Modes:
+Supported modes:
 
-- `auto`
-- `fast`
-- `deep`
-- `research`
-- `code`
-- `qa`
-- `document`
+* `auto`
+* `fast`
+* `deep`
+* `research`
+* `code`
+* `qa`
+* `document`
 
-`fast` intentionally skips the full tool/subagent pipeline.
+`fast` intentionally skips most of the full tool and subagent pipeline.
 
-## Model-independent
+---
 
-The runtime doesn't hard-code Qwen. Edit `config.json` or set the model in each request.
+# Model Support
+
+The runtime does not hard-code a specific Ollama model.
+
+Set the default model in:
+
+```text
+config.json
+```
+
+or specify one per request.
 
 Examples:
 
-- `qwen3:8b`
-- `qwen3-coder`
-- DeepSeek models installed in Ollama
-- Gemma models
-- Llama models
-- future Ollama models
+```text
+qwen3:8b
+qwen3-coder
+deepseek-r1
+gemma
+llama
+```
 
-The quality of agent planning and browser control still depends heavily on the selected model. Larger/tool-capable local models normally perform multi-step action selection more reliably.
+Any compatible future Ollama model can also be used.
 
-## Tool safety
+Agent quality depends heavily on the selected model. Larger models and models with stronger reasoning/tool-selection capabilities generally perform more reliably on long multi-step workflows.
 
-The general shell remains disabled.
+---
 
-The local filesystem tools are restricted to the `workspace` folder.
-
-Agent Reach subprocess integration is allowlisted to specific capabilities rather than giving the LLM arbitrary terminal access.
-
-MCP servers are opt-in through `mcp_servers.json`.
-
-Browser Use is opt-in through installation/config.
-
-## Endpoints
-
-- `GET /health`
-- `GET /v1/models`
-- `POST /agent/run`
-- `POST /v1/chat/completions`
-- `GET /tools/status`
-- `POST /tools/browser`
-- `GET /tools/mcp/{server}/tools`
-- `POST /tools/mcp/{server}/call/{tool_name}`
-- `GET /tools/agent-reach/doctor`
-
-## React / Node example
+# React / Node Example
 
 ```js
-const r = await fetch("http://127.0.0.1:8787/agent/run", {
+const response = await fetch("http://127.0.0.1:8787/agent/run", {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json"
+  },
   body: JSON.stringify({
-    prompt: "Open the documentation website if needed, inspect it, then explain how to integrate this library.",
+    prompt:
+      "Open the documentation website if needed, inspect it, then explain how to integrate this library.",
     model: "qwen3:8b",
     session_id: "react-dev",
     mode: "code",
+    engine: "auto",
     allow_tools: true
   })
 });
 
-const data = await r.json();
+const data = await response.json();
+
 console.log(data.answer);
 console.log(data.metadata.tools_used);
 ```
-## Security
-
-NEXUS Agent is designed to run locally.
-
-By default:
-
-- The API binds to `127.0.0.1`.
-- Arbitrary shell execution is disabled.
-- Filesystem tools should remain limited to the local workspace.
-- MCP integrations are optional.
-- Browser automation is optional.
-- Local memory and runtime files should not be committed to GitHub.
-
-### Never commit
-
-Do not commit any of the following:
-
-- `.env` files
-- API keys
-- passwords
-- tokens
-- private certificates
-- browser cookies
-- login sessions
-- `memory.db`
-- private MCP configuration files
-- customer or company data
-- files placed inside the local workspace
-
-Use environment variables or local configuration files for secrets.
-
-If a secret is accidentally committed, deleting the file is not enough.
-Revoke or rotate the exposed credential immediately.
-
-### Network access
-
-NEXUS Agent is configured for local use by default.
-
-Do not expose the API directly to the public internet without authentication,
-HTTPS, rate limiting, access controls, and proper network security.
-## Why this is one runtime instead of 10 frameworks installed together
-
-The architecture borrows useful patterns from CrewAI, LangGraph, AutoGen, MetaGPT, smolagents, Letta, LlamaIndex, Pydantic AI, Browser Use, Agent Reach, MCP, and evaluator/guardrail systems without forcing all those orchestration frameworks to fight inside one Python environment.
-
-The core stays yours. External frameworks are adapters where they add an actual capability.
 
 ---
 
-# NEXUS v3 — Hybrid Engine Router
+# API Endpoints
 
-NEXUS v3 adds an optional DeerFlow 2.0 execution engine without replacing the existing NEXUS runtime.
+## Core
 
-## Three execution engines
+```text
+GET  /health
+GET  /v1/models
+POST /agent/run
+POST /v1/chat/completions
+```
 
-NEXUS can now route each request to:
+## Tools
 
-- `ollama` — direct local model response for simple/fast work.
-- `nexus` — NEXUS planner + approved tools + specialist subagents + reviewer.
-- `deerflow` — DeerFlow long-horizon super-agent for heavy multi-step research, coding, sandbox, artifact, and subagent workloads.
-- `auto` — NEXUS chooses the lightest capable engine.
+```text
+GET  /tools/status
+POST /tools/browser
+
+GET  /tools/mcp/{server}/tools
+POST /tools/mcp/{server}/call/{tool_name}
+
+GET  /tools/agent-reach/doctor
+```
+
+## Engines
+
+```text
+GET  /engines/status
+GET  /engines/deerflow/status
+POST /engines/deerflow/run
+```
+
+---
+
+# DeerFlow Configuration
+
+`config.json` contains a `deerflow` section.
 
 Example:
-
-```json
-{
-  "prompt": "Research this complex subject and create a complete implementation plan.",
-  "model": "qwen3:8b",
-  "session_id": "project-42",
-  "mode": "deep",
-  "engine": "auto",
-  "deerflow_mode": "ultra"
-}
-```
-
-## DeerFlow modes
-
-NEXUS maps directly to DeerFlow context modes:
-
-- `flash` — no thinking/planning/subagents.
-- `standard` — thinking enabled.
-- `pro` — thinking + plan mode.
-- `ultra` — thinking + planning + DeerFlow subagents.
-
-## Session continuity
-
-NEXUS stores the DeerFlow `thread_id` associated with each NEXUS `session_id` in the existing local SQLite memory database. A later request using the same NEXUS session can continue the same DeerFlow conversation.
-
-## NEXUS review of DeerFlow
-
-A DeerFlow result is not blindly trusted. NEXUS runs its local Final Reviewer over the returned result. When the review fails, NEXUS sends concrete correction instructions back to the same DeerFlow thread and reviews the corrected result again.
-
-## Graceful fallback
-
-DeerFlow is optional. If it is disabled, not installed, still starting, or unreachable, NEXUS falls back to the configured engine (`nexus` by default). The core local server remains usable.
-
-## Engine status
-
-```text
-GET http://127.0.0.1:8787/engines/status
-GET http://127.0.0.1:8787/engines/deerflow/status
-```
-
-Direct DeerFlow adapter test:
-
-```text
-POST http://127.0.0.1:8787/engines/deerflow/run
-```
-
-## DeerFlow configuration
-
-`config.json` contains a `deerflow` section. Default local URLs follow DeerFlow's unified proxy:
 
 ```json
 {
@@ -327,8 +473,197 @@ POST http://127.0.0.1:8787/engines/deerflow/run
 }
 ```
 
-DeerFlow remains a separate installation. See `DEERFLOW_SETUP_WINDOWS.md`.
+DeerFlow remains a separate installation.
 
-## Important Git design
+See:
 
-NEXUS does not clone DeerFlow inside this repository and does not modify the repository's `.git` metadata. Keep DeerFlow in its own folder and let NEXUS communicate with it over HTTP.
+```text
+DEERFLOW_SETUP_WINDOWS.md
+```
+
+---
+
+# Git Architecture
+
+NEXUS does not clone DeerFlow inside this repository and does not modify DeerFlow's `.git` metadata.
+
+Keep DeerFlow in its own folder.
+
+NEXUS communicates with DeerFlow over HTTP.
+
+Example architecture:
+
+```text
+NEXUS-Agent/
+    ├── NEXUS runtime
+    ├── API server
+    ├── tool adapters
+    ├── SQLite memory
+    └── configuration
+
+DeerFlow/
+    └── independent repository
+
+NEXUS <---- HTTP ----> DeerFlow
+```
+
+This keeps both projects independently upgradeable and avoids nested repository problems.
+
+---
+
+# Tool Safety
+
+NEXUS is designed around restricted tool access.
+
+By default:
+
+* arbitrary shell execution is disabled
+* filesystem access is restricted to the configured workspace
+* Agent Reach commands are allowlisted
+* MCP servers are explicitly opt-in
+* browser automation is opt-in
+* the API binds to localhost
+
+Giving an LLM arbitrary terminal or filesystem access is intentionally avoided.
+
+---
+
+# Security
+
+NEXUS is designed primarily for local execution.
+
+Default API binding:
+
+```text
+127.0.0.1
+```
+
+Do not expose the API directly to the public internet without adding appropriate protections such as:
+
+* authentication
+* HTTPS
+* authorization
+* rate limiting
+* firewall rules
+* network isolation
+* auditing
+
+---
+
+## Never Commit Secrets
+
+Do not commit:
+
+* `.env` files
+* API keys
+* passwords
+* access tokens
+* private certificates
+* browser cookies
+* authenticated browser sessions
+* `memory.db`
+* private MCP configuration
+* customer data
+* company data
+* sensitive workspace files
+
+Use environment variables or local configuration files for secrets.
+
+If a credential is accidentally committed, deleting the file from the repository is not sufficient.
+
+Revoke or rotate the exposed credential immediately.
+
+---
+
+# Why One Runtime Instead of Ten Frameworks?
+
+NEXUS borrows useful architectural ideas from projects and ecosystems such as:
+
+* CrewAI
+* LangGraph
+* AutoGen
+* MetaGPT
+* smolagents
+* Letta
+* LlamaIndex
+* Pydantic AI
+* Browser Use
+* Agent Reach
+* MCP
+* evaluator and guardrail systems
+
+The goal is not to install every framework into one Python environment.
+
+NEXUS keeps its own orchestration core and uses external projects as adapters when they provide a useful capability.
+
+This reduces dependency conflicts and keeps the runtime understandable, replaceable, and under your control.
+
+---
+
+# Project Philosophy
+
+NEXUS is built around a few principles:
+
+1. **Local-first** — use local Ollama models whenever possible.
+2. **Tool-restricted** — agents should receive capabilities, not unrestricted machine access.
+3. **Model-independent** — orchestration should not depend on one specific model.
+4. **Engine-independent** — complex workloads can be delegated without replacing the core runtime.
+5. **Review before trust** — generated results can be checked and corrected.
+6. **Composable** — MCP and adapters allow capabilities to grow independently.
+7. **Graceful degradation** — optional services should not break the core server.
+
+---
+
+# Version Summary
+
+## v1
+
+Introduced:
+
+* planning
+* subagents
+* memory
+* synthesis
+* review
+* retries
+* Ollama model switching
+* OpenAI-compatible API
+
+## v2
+
+Added a real tool execution loop:
+
+```text
+Tool Router → Tool → Observation → Continued Agent Reasoning
+```
+
+Also added:
+
+* Browser Use
+* MCP
+* Agent Reach
+* stronger tool safety
+
+## v3
+
+Added the hybrid engine architecture:
+
+```text
+Ollama + NEXUS + DeerFlow
+```
+
+with:
+
+* automatic engine routing
+* DeerFlow session continuity
+* NEXUS review of DeerFlow results
+* correction loops
+* graceful engine fallback
+
+---
+
+# Status
+
+NEXUS Agent is under active development.
+
+Expect APIs, adapters, configuration options, and orchestration behavior to continue evolving.
